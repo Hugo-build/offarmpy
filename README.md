@@ -2,7 +2,11 @@
 
 **Python implementation for time-domain simulation of offshore fish farm systems**
 
-OffarmPy is a numerical simulation tool for analyzing the dynamic response of floating offshore aquaculture systems, including mooring lines, environmental loads (waves, currents), and structural dynamics. It provides a Python-native equivalent to the MATLAB OffarmLab toolbox.
+OffarmPy is a numerical simulation tool for analyzing the dynamic response of floating offshore aquaculture systems, including mooring lines, environmental loads (waves, currents), and structural dynamics. It provides a Python-native simulation environment.
+![The solving flow](asset/figs/workFlow.png)
+
+The current configuration file in `usr0` is tested for user specific working path, the project inside is related to an academical concept--An array of semi-sub fish farming cages.
+![The cage array](asset/figs/showCageArray.png)
 
 ---
 
