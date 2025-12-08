@@ -1,0 +1,15 @@
+# Core dependencies
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Optional: Progress bar for simulations
+tqdm>=4.65.0
+
+# Optional: Plotting
+matplotlib>=3.7.0
+
+# Optional: JIT compilation for performance optimization
+# Uncomment if you want faster execution (requires compatible CPU)
+# numba>=0.57.0
+
+

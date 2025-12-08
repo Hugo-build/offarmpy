@@ -1,0 +1,21 @@
+{
+  "nCase": 1,
+  "caseList": [
+    5,
+    11,
+    0.5,
+    0,
+    0
+  ],
+  "caseSeq": 1,
+  "nVar": 5,
+  "varSeq": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "infoList": "Hs=5;Tp=11;Uc1=0.5;waveDir=0;currentDir=0",
+  "log": []
+}

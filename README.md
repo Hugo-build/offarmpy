@@ -1,0 +1,248 @@
+# OffarmPy
+
+**Python implementation for time-domain simulation of offshore fish farm systems**
+
+OffarmPy is a numerical simulation tool for analyzing the dynamic response of floating offshore aquaculture systems, including mooring lines, environmental loads (waves, currents), and structural dynamics. It provides a Python-native equivalent to the MATLAB OffarmLab toolbox.
+
+---
+
+## Features
+
+- **Mooring System Modeling**: Quasi-static catenary cable formulation with multi-segment support
+- **Environmental Loads**: Wave (JONSWAP/PM spectrum) and current force calculations
+- **Dynamic Simulation**: State-space time integration using scipy's `solve_ivp` (RK45)
+- **Static Equilibrium**: Root-finding solvers for mooring pre-tension analysis
+- **Modular Configuration**: JSON-based input files for environment, mooring, and simulation settings
+- **Extensible Design**: DIY config hooks for runtime customization
+
+---
+
+## Installation
+
+### Prerequisites
+
+- Python 3.10 or higher
+
+### Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Optional: Performance optimization
+
+For faster execution with JIT compilation, install numba:
+
+```bash
+pip install numba
+```
+
+---
+
+## Project Structure
+
+```
+offarm-py/
+├── src/
+│   ├── Cable.py        # Cable/catenary mechanics and tension calculations
+│   ├── Forces.py       # Environmental force calculators (drag, wave, mooring)
+│   ├── integrator.py   # ODE solvers and static equilibrium routines
+│   ├── params.py       # Dataclasses for configuration (Env, OffSys, LineTypes, etc.)
+│   └── Simu.py         # Main simulation runner
+├── usr0/               # Example workspace with sample configurations
+│   ├── INPUT_manifest.json
+│   ├── simu_config.json
+│   ├── env_withoutVar.json
+│   ├── sys6cage_DgEls_wT1st.json
+│   ├── lineTypes_*.json
+│   ├── varSys.json
+│   └── diy_configs.py  # User-defined configuration modifications
+├── examples/           # Example scripts (placeholder)
+├── lib/                # External libraries (placeholder)
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## Quick Start
+
+### Running a simulation
+
+```python
+from pathlib import Path
+from src.Simu import run_a_simulation
+
+# Path to your workspace manifest
+manifest_path = Path("usr0/INPUT_manifest.json")
+
+# Run simulation
+results = run_a_simulation(
+    manifest_path=manifest_path,
+    case_id=1,
+    info_string="Test case: 6-cage system with mooring and wave loads",
+    results_dir="results",
+    save_results=True,
+    show_progress=True,
+    plot_results=True,
+    env_file="env_withoutVar.json",
+)
+
+# Access results
+print(f"Success: {results.success}")
+print(f"Max displacement: {results.max_displacement:.4f} m")
+print(f"Elapsed time: {results.elapsed_time:.2f} s")
+```
+
+### Or run from command line
+
+```bash
+cd src
+python Simu.py
+```
+
+---
+
+## Configuration Files
+
+### INPUT_manifest.json
+
+Master file that references all other configuration files:
+
+```json
+{
+  "workspace_path": ".",
+  "files": {
+    "lineSys": "sys6cage_DgEls_wT1st.json",
+    "lineType": "lineTypes_23-Feb-2025_12-25-34.json",
+    "simu": "simu_config.json",
+    "env": "env_withoutVar.json"
+  }
+}
+```
+
+### Environment (env_*.json)
+
+Defines wave and current conditions:
+
+```json
+{
+  "current": {
+    "vel": [0.5, 0.3],
+    "zlevel": [0, -50],
+    "wakeRatio": 0.85,
+    "propDir": 0
+  },
+  "wave": {
+    "specType": "Jonswap",
+    "Hs": 2.0,
+    "Tp": 8.0,
+    "gamma": 3.3,
+    "propDir": 0,
+    "dfreq": 0.01,
+    "domega": 0.01
+  }
+}
+```
+
+### Simulation Config (simu_config.json)
+
+Simulation parameters:
+
+```json
+{
+  "simulator": "offarmLab",
+  "static_simu": { "enabled": true },
+  "dynamic_simu": {
+    "enabled": true,
+    "time_settings": {
+      "tStart": 0,
+      "tEnd": 600,
+      "dt": 0.5
+    }
+  }
+}
+```
+
+---
+
+## DIY Configurations
+
+Customize system properties at runtime by editing `diy_configs.py` in your workspace:
+
+```python
+def diy_configs(configs, offsys, line_types, env):
+    """Modify configurations before simulation runs."""
+    
+    # Example: Update anchor positions
+    offsys.anchorPos_init[:, 0] = [500, 0, -50]
+    
+    # Example: Change wave height
+    # env.wave.Hs = 3.0
+    
+    return offsys, line_types, env
+```
+
+---
+
+## Key Modules
+
+### Cable.py
+
+- `Cable` class: Multi-segment catenary cable with load-displacement relationships
+- `Catenary()`: Core catenary equation solver
+- `getTension()` / `getTension2ends()`: Tension interpolation from lookup tables
+
+### Forces.py
+
+- `DragForceNB_OT`: Combined current + wave drag force calculator
+- `CurrentForceNB`: Steady current force on slender elements
+- `QSmoorForce`: Quasi-static mooring restoring force
+
+### integrator.py
+
+- `solve_dynamics_fast()`: Fast ODE integration with progress tracking
+- `solve_static()`: Static equilibrium solver
+
+### params.py
+
+- Dataclasses: `Env`, `Wave`, `Current`, `OffSys`, `FloatBody`, `ElSys`, `LineTypes`, `SimuConfig`
+- Loader functions: `load_env_config()`, `load_line_types()`, `load_simu_config()`, etc.
+
+---
+
+## Outputs
+
+Simulation results are saved to the `results/` directory:
+
+| File | Description |
+|------|-------------|
+| `disp_*.npy` | Displacement time history (NumPy binary) |
+| `vel_*.npy` | Velocity time history (NumPy binary) |
+| `results_*.json` | Summary with statistics and metadata |
+| `dynamic_response_*.png` | Surge displacement plots (if enabled) |
+
+---
+
+## Dependencies
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| numpy | ≥1.24.0 | Array operations |
+| scipy | ≥1.10.0 | ODE solvers, optimization |
+| tqdm | ≥4.65.0 | Progress bars (optional) |
+| matplotlib | ≥3.7.0 | Plotting (optional) |
+| numba | ≥0.57.0 | JIT compilation (optional) |
+
+---
+
+## License
+
+[MIT License](LICENSE) — or specify your preferred license.
+
+---
+
+## Acknowledgments
+
+This Python implementation mirrors the MATLAB OffarmLab toolbox developed at the University of Stavanger (UiS) for offshore aquaculture research.
+

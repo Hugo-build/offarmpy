@@ -1,0 +1,54 @@
+{
+    "vars": [
+        "var1",
+        "var2",
+        "var3",
+        "var4",
+        "var5"
+    ],
+    "varNames": [
+        "HS",
+        "TP",
+        "UC",
+        "dirWave",
+        "dirCur"
+    ],
+    "varUnits": [
+        "m",
+        "s",
+        "m/s",
+        "deg",
+        "deg"
+    ],
+    "varDescription": [
+        "Significant wave height",
+        "Peak wave period",
+        "Current velocity",
+        "Wave propagation direction",
+        "Current direction"
+    ],
+    "exprs": [],
+    "bounds": [
+        [
+            0.5,
+            7
+        ],
+        [
+            7,
+            20
+        ],
+        [
+            0.1,
+            1
+        ],
+        [
+            0,
+            359
+        ],
+        [
+            0,
+            359
+        ]
+    ],
+    "method": "random"
+}

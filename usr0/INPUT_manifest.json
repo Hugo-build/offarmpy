@@ -1,0 +1,12 @@
+{
+    "workspace_path": "usr0",
+    "files": {
+        "env": "env_withoutVar.json",
+        "lineType": "lineTypes_23-Feb-2025_12-25-34.json",
+        "lineSys": "sys6cage_DgEls_wT1st.json",
+        "vessels": "vessels.json",
+        "simu": "simu_config.json",
+        "varSys": "varSys.json",
+        "cases":"resultsPre_24-Feb-2025_12-55-13.json"
+    }
+}
