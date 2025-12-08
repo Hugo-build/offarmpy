@@ -14,16 +14,25 @@ import numpy as np
 from numpy.typing import NDArray
 
 # Import configuration classes from params module
-from params import (
-    Env, OffSys, ElSys, SimuConfig, LineTypes, FloatBody,
-    load_json, load_env_config, load_line_types, load_simu_config, 
-    load_manifest,
-)
-
-# Import force classes from Forces module
-from Forces import (
-    DragForceNB_OT, CurrentForceNB, QSmoorForce,
-)
+# Support both package import and direct script execution
+try:
+    from .params import (
+        Env, OffSys, ElSys, SimuConfig, LineTypes, FloatBody,
+        load_json, load_env_config, load_line_types, load_simu_config, 
+        load_manifest,
+    )
+    from .Forces import (
+        DragForceNB_OT, CurrentForceNB, QSmoorForce,
+    )
+except ImportError:
+    from params import (
+        Env, OffSys, ElSys, SimuConfig, LineTypes, FloatBody,
+        load_json, load_env_config, load_line_types, load_simu_config, 
+        load_manifest,
+    )
+    from Forces import (
+        DragForceNB_OT, CurrentForceNB, QSmoorForce,
+    )
 
 
 #=============================================================================
@@ -329,7 +338,7 @@ def run_a_simulation(
     
     print(f"  Manifest path: {manifest_path}")
     
-    # Load manifest
+    # ___Load manifest___
     manifest = load_manifest(manifest_path)
     base = workspace_path  # Use the actual workspace path
     files = manifest.files
@@ -337,20 +346,20 @@ def run_a_simulation(
     print(f"  Workspace: {base}")
     print(f"  Files: {list(files.keys())}")
     
-    # Load line types
+    # ___Load line types___
     line_types = load_line_types(base / files["lineType"])
     print(f"  ✓ Loaded lineTypes: {len(line_types)} types")
     
-    # Load offshore system
+    # ___Load offshore system___
     offsys_data = load_json(base / files["lineSys"])
     offsys = OffSys.from_dict(offsys_data)
     print(f"  ✓ Loaded lineSys: {offsys.nbod} bodies, {offsys.nDoF} DoF")
     
-    # Load simulation config
+    # ___Load simulation config___
     simu_config = load_simu_config(base / files["simu"])
     print(f"  ✓ Loaded simu: static={simu_config.static_enabled}, dynamic={simu_config.dynamic_enabled}")
     
-    # Load environment (use override if provided, otherwise from manifest)
+    # ___Load environment (use override if provided, otherwise from manifest)___
     if env_file is not None:
         env_path = base / env_file
     elif "env" in files:
@@ -584,17 +593,19 @@ def run_a_simulation(
             # Update progress bar (throttled)
             if show_progress and HAS_TQDM and tracker.should_update_progress() and hasattr(dxdt_with_progress, 'pbar'):
                 pbar = dxdt_with_progress.pbar
-                progress_pct = tracker.progress()
+                progress_pct = int(tracker.progress())
                 elapsed = tracker.elapsed_wall_time()
                 remaining = tracker.estimated_remaining()
                 
-                pbar.n = int(progress_pct)
+                # Use update() with delta instead of setting n directly
+                delta = progress_pct - pbar.n
+                if delta > 0:
+                    pbar.update(delta)
                 pbar.set_postfix_str(
                     f"t={t:.1f}s | {tracker.call_count} calls | "
                     f"elapsed: {tracker.format_time(elapsed)} | "
-                    f"remain: {tracker.format_time(remaining)}"
+                    f"ETA: {tracker.format_time(remaining)}"
                 )
-                pbar.refresh()
             
             # Compute forces
             u = mooring_force(x) + drag_force.calculate_with_cache(t, x)
@@ -618,7 +629,10 @@ def run_a_simulation(
                 desc="Simulating", 
                 unit="%",
                 bar_format='{desc}: |{bar}| {percentage:.1f}% [{postfix}]',
-                ncols=100,
+                dynamic_ncols=True,  # Adapt to terminal width
+                position=0,          # Force single line
+                leave=True,          # Keep bar after completion
+                mininterval=0.3,     # Minimum update interval (seconds)
             )
             pbar.set_postfix_str(f"t={t_start:.1f}s | 0 calls | elapsed: 00:00 | ETA: --:--")
             dxdt_with_progress.pbar = pbar
@@ -636,12 +650,14 @@ def run_a_simulation(
         finally:
             if show_progress and HAS_TQDM:
                 elapsed = tracker.elapsed_wall_time()
-                pbar.n = 100
+                # Complete the progress bar properly
+                remaining = 100 - pbar.n
+                if remaining > 0:
+                    pbar.update(remaining)
                 pbar.set_postfix_str(
                     f"t={t_end:.1f}s | {tracker.call_count} calls | "
                     f"elapsed: {tracker.format_time(elapsed)} | Done!"
                 )
-                pbar.refresh()
                 pbar.close()
         
         elapsed = time.perf_counter() - t0_sim
@@ -819,9 +835,10 @@ if __name__ == "__main__":
     """
     from pathlib import Path
     
+    
     # Path to manifest file
     script_dir = Path(__file__).parent
-    usr_path = script_dir.parent.parent / "usr0"
+    usr_path = script_dir.parent/ "examples/usr0"
     manifest_path = usr_path / "INPUT_manifest.json"
     
     # Run simulation with a single function call

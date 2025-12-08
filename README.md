@@ -25,9 +25,23 @@ The current configuration file in `usr0` is tested for user specific working pat
 
 ### Prerequisites
 
-- Python 3.10 or higher
+- Python 3.9 or higher
 
-### Install dependencies
+### Install from source (recommended for development)
+
+```bash
+# Clone the repository
+git clone https://github.com/Hugo-build/offarm-py.git
+cd offarm-py
+
+# Install in development mode
+pip install -e .
+
+# Or with optional dependencies (tqdm, matplotlib)
+pip install -e ".[full]"
+```
+
+### Install dependencies only (without package installation)
 
 ```bash
 pip install -r requirements.txt
@@ -47,22 +61,24 @@ pip install numba
 
 ```
 offarm-py/
-├── src/
-│   ├── Cable.py        # Cable/catenary mechanics and tension calculations
-│   ├── Forces.py       # Environmental force calculators (drag, wave, mooring)
-│   ├── integrator.py   # ODE solvers and static equilibrium routines
-│   ├── params.py       # Dataclasses for configuration (Env, OffSys, LineTypes, etc.)
-│   └── Simu.py         # Main simulation runner
-├── usr0/               # Example workspace with sample configurations
-│   ├── INPUT_manifest.json
-│   ├── simu_config.json
-│   ├── env_withoutVar.json
-│   ├── sys6cage_DgEls_wT1st.json
-│   ├── lineTypes_*.json
-│   ├── varSys.json
-│   └── diy_configs.py  # User-defined configuration modifications
-├── examples/           # Example scripts (placeholder)
-├── lib/                # External libraries (placeholder)
+├── src/                      # Main package (offarm)
+│   ├── __init__.py           # Package initialization and exports
+│   ├── __main__.py           # CLI entry point (python -m offarm)
+│   ├── cli.py                # Command-line interface
+│   ├── Cable.py              # Cable/catenary mechanics
+│   ├── Forces.py             # Environmental force calculators
+│   ├── integrator.py         # ODE solvers and static equilibrium
+│   ├── params.py             # Configuration dataclasses
+│   └── Simu.py               # Main simulation runner
+├── examples/
+│   └── usr0/                 # Example workspace (6-cage fish farm)
+│       ├── INPUT_manifest.json
+│       ├── simu_config.json
+│       ├── env_withoutVar.json
+│       ├── sys6cage_DgEls_wT1st.json
+│       ├── lineTypes_*.json
+│       └── diy_configs.py
+├── pyproject.toml            # Package configuration
 ├── requirements.txt
 └── README.md
 ```
@@ -75,10 +91,10 @@ offarm-py/
 
 ```python
 from pathlib import Path
-from src.Simu import run_a_simulation
+from offarm import run_a_simulation
 
 # Path to your workspace manifest
-manifest_path = Path("usr0/INPUT_manifest.json")
+manifest_path = Path("examples/usr0/INPUT_manifest.json")
 
 # Run simulation
 results = run_a_simulation(
@@ -98,11 +114,63 @@ print(f"Max displacement: {results.max_displacement:.4f} m")
 print(f"Elapsed time: {results.elapsed_time:.2f} s")
 ```
 
-### Or run from command line
+---
+
+## Command Line Interface (CLI)
+
+After installation, the `offarm` command is available from any directory:
+
+### Basic Usage
 
 ```bash
-cd src
-python Simu.py
+# Run simulation from manifest file
+offarm run path/to/INPUT_manifest.json
+
+# Run from example workspace directory
+cd examples/usr0
+offarm run INPUT_manifest.json
+
+# Or using Python module
+python -m offarm run INPUT_manifest.json
+```
+
+### CLI Options
+
+```bash
+# Run with custom environment file
+offarm run INPUT_manifest.json --env env_withoutVar.json
+
+# Enable plotting
+offarm run INPUT_manifest.json --plot
+
+# Custom case ID and description
+offarm run INPUT_manifest.json --case-id 1 --info "Test simulation"
+
+# Save to custom output directory
+offarm run INPUT_manifest.json --output-dir my_results
+
+# Quick test run (no saving)
+offarm run INPUT_manifest.json --no-save --no-progress
+
+# Adjust solver tolerances
+offarm run INPUT_manifest.json --rtol 1e-6 --atol 1e-10
+```
+
+### Other Commands
+
+```bash
+# Show manifest information
+offarm info INPUT_manifest.json
+
+# Initialize a new workspace with template files
+offarm init my_workspace
+
+# Show version
+offarm --version
+
+# Show help
+offarm --help
+offarm run --help
 ```
 
 ---
@@ -242,7 +310,7 @@ Simulation results are saved to the `results/` directory:
 
 ## License
 
-[MIT License](LICENSE) — or specify your preferred license.
+[MIT License](LICENSE).
 
 ---
 

@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "offarm"
+version = "0.1.0"
+description = "Offshore Farm Laboratory - Dynamic simulation of offshore aquaculture systems"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Hugo-build"},
+]
+keywords = [
+    "offshore",
+    "aquaculture",
+    "simulation",
+    "mooring",
+    "hydrodynamics",
+    "fish farm",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "tqdm>=4.65.0",
+    "matplotlib>=3.7.0",
+]
+
+[project.optional-dependencies]
+full = [
+    "tqdm>=4.65.0",
+    "matplotlib>=3.7.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.scripts]
+offarm = "offarm.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Hugo-build/offarm-py"
+Documentation = "https://github.com/Hugo-build/offarm-py"
+Repository = "https://github.com/Hugo-build/offarm-py"
+
+[tool.setuptools]
+packages = ["offarm"]
+package-dir = {"offarm" = "src"}
+
+[tool.setuptools.package-data]
+offarm = ["py.typed"]
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311', 'py312']
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

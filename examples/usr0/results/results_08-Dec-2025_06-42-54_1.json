@@ -1,0 +1,15 @@
+{
+  "case_id": 1,
+  "info_string": "Test case: 6-cage system with mooring and wave loads",
+  "success": true,
+  "status": 1,
+  "message": "",
+  "displacement_file": "results/bin/disp_08-Dec-2025_06-42-54.npy",
+  "velocity_file": "results/bin/vel_08-Dec-2025_06-42-54.npy",
+  "timestamp": "08-Dec-2025_06-42-54",
+  "elapsed_time": 575.8109957079869,
+  "n_rhs_calls": 80414,
+  "max_displacement": 91.53386780813422,
+  "n_time_steps": 10001,
+  "case_info": {}
+}

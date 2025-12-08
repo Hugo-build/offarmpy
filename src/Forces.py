@@ -26,12 +26,21 @@ except ImportError:
         return decorator
 
 # Import dataclasses from params module
-from params import (
-    Current, Wave, Env, FloatBody, OffSys, ElSys,
-    LineType, LineTypes, SimuConfig, VarSys,
-    load_json, load_env_config, load_line_types, load_simu_config,
-)
-from Cable import FQSmoor
+# Support both package import and direct script execution
+try:
+    from .params import (
+        Current, Wave, Env, FloatBody, OffSys, ElSys,
+        LineType, LineTypes, SimuConfig, VarSys,
+        load_json, load_env_config, load_line_types, load_simu_config,
+    )
+    from .Cable import FQSmoor
+except ImportError:
+    from params import (
+        Current, Wave, Env, FloatBody, OffSys, ElSys,
+        LineType, LineTypes, SimuConfig, VarSys,
+        load_json, load_env_config, load_line_types, load_simu_config,
+    )
+    from Cable import FQSmoor
 
 
 
@@ -1075,7 +1084,7 @@ class DragForceNB_OT(DragForceNB):
     Mirrors the MATLAB FdragNB_v2OT function.
     """
     
-    def __init__(self, Elsys, current, wave, rho=1025, g=9.81, threshold=0.5):
+    def __init__(self, Elsys, current, wave, rho=1025, g=9.81, threshold=1.0):
         """
         Initialize with caching parameters.
         

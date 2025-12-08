@@ -1,0 +1,61 @@
+{
+  "vars": [
+    "var1",
+    "var2",
+    "var3",
+    "var4",
+    "var5"
+  ],
+  "varNames": [
+    "Hs",
+    "Tp",
+    "UC",
+    "dirWave",
+    "dirCur"
+  ],
+  "varUnits": [
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  "varDescription": [
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  "bounds": [
+    [
+      0.5,
+      7.0
+    ],
+    [
+      7.0,
+      20.0
+    ],
+    [
+      0.1,
+      1.0
+    ],
+    [
+      0.0,
+      359.0
+    ],
+    [
+      0.0,
+      359.0
+    ]
+  ],
+  "path_in_config": [
+    "wave.Hs",
+    "wave.Tp",
+    "current.vel[0]",
+    "wave.propDir",
+    "current.propDir"
+  ],
+  "exprs": [],
+  "method": "random"
+}
