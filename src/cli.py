@@ -180,7 +180,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     
     try:
         results = run_a_simulation(
-            manifest_path=manifest_path,
+            manifest=manifest_path,  # Can be path OR dict with pre-injected configs
             case_id=args.case_id,
             info_string=args.info,
             results_dir=args.output_dir,

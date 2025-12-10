@@ -19,7 +19,7 @@ try:
     from .params import (
         Env, OffSys, ElSys, SimuConfig, LineTypes, FloatBody,
         load_json, load_env_config, load_line_types, load_simu_config, 
-        load_manifest,
+        load_manifest, load_var_sys, load_offsys,
     )
     from .Forces import (
         DragForceNB_OT, CurrentForceNB, QSmoorForce,
@@ -28,7 +28,7 @@ except ImportError:
     from params import (
         Env, OffSys, ElSys, SimuConfig, LineTypes, FloatBody,
         load_json, load_env_config, load_line_types, load_simu_config, 
-        load_manifest,
+        load_manifest, load_var_sys, load_offsys,
     )
     from Forces import (
         DragForceNB_OT, CurrentForceNB, QSmoorForce,
@@ -123,6 +123,105 @@ class Configs:
     var_sys: Any = None
 
 
+def load_configs_from_manifest(
+    manifest_path: Path | str,
+    base_path: Path | str = None,
+) -> Configs:
+    """
+    Load all configurations from an INPUT_manifest.json file.
+    
+    The manifest specifies paths to individual config files:
+        {
+            "workspace_path": "usr0",
+            "files": {
+                "env": "env_withoutVar.json",
+                "lineType": "lineTypes.json",
+                "lineSys": "sys6cage.json",
+                "simu": "simu_config.json",
+                "varSys": "varSys.json"
+            }
+        }
+    
+    Args:
+        manifest_path: Path to the INPUT_manifest.json file
+        base_path: Optional base path for resolving relative paths.
+                   If None, uses the manifest file's parent directory.
+    
+    Returns:
+        Configs dataclass with all loaded configurations
+    
+    Example:
+        >>> configs = load_configs_from_manifest("usr0/INPUT_manifest.json")
+        >>> print(configs.env.wave.Hs)
+    """
+    manifest_path = Path(manifest_path)
+    
+    # Determine base path for resolving file references
+    if base_path is None:
+        base_path = manifest_path.parent
+    else:
+        base_path = Path(base_path)
+    
+    # Load the manifest
+    manifest = load_manifest(manifest_path)
+    
+    # Resolve workspace path relative to base_path
+    workspace = base_path / manifest.workspace_path
+    
+    # Initialize config holders
+    env = None
+    offsys = None
+    line_types = None
+    simu_config = None
+    var_sys = None
+    
+    # Load each config file if specified in manifest
+    files = manifest.files
+    
+    # Environment config
+    if "env" in files:
+        env_path = workspace / files["env"]
+        if env_path.exists():
+            env = load_env_config(env_path)
+            print(f"  Loaded env: {env_path.name}")
+    
+    # Offshore system (lineSys)
+    if "lineSys" in files:
+        sys_path = workspace / files["lineSys"]
+        if sys_path.exists():
+            offsys = load_offsys(sys_path)
+            print(f"  Loaded offsys: {sys_path.name}")
+    
+    # Line types
+    if "lineType" in files:
+        lt_path = workspace / files["lineType"]
+        if lt_path.exists():
+            line_types = load_line_types(lt_path)
+            print(f"  Loaded line_types: {lt_path.name}")
+    
+    # Simulation config
+    if "simu" in files:
+        simu_path = workspace / files["simu"]
+        if simu_path.exists():
+            simu_config = load_simu_config(simu_path)
+            print(f"  Loaded simu_config: {simu_path.name}")
+    
+    # Variable system
+    if "varSys" in files:
+        var_path = workspace / files["varSys"]
+        if var_path.exists():
+            var_sys = load_var_sys(var_path)
+            print(f"  Loaded var_sys: {var_path.name}")
+    
+    return Configs(
+        env=env,
+        offsys=offsys,
+        line_types=line_types,
+        simu_config=simu_config,
+        var_sys=var_sys,
+    )
+
+
 #=============================================================================
 #                State Space System for explicit integration
 #=============================================================================
@@ -198,6 +297,24 @@ def build_state_space(offsys: OffSys) -> tuple[NDArray, NDArray]:
 #                           Simulation Results
 #=============================================================================
 
+def get_logo() -> str:
+    return """
+_____________________________________________________________
+
+Welcome to OffarmPy!
+
+                                                            
+   ▄▄▄▄    ▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄     ▄▄     ▄▄▄▄▄▄    ▄▄▄  ▄▄▄ 
+  ██▀▀██   ██▀▀▀▀▀▀  ██▀▀▀▀▀▀    ████    ██▀▀▀▀██  ███  ███ 
+ ██    ██  ██        ██          ████    ██    ██  ████████ 
+ ██    ██  ███████   ███████    ██  ██   ███████   ██ ██ ██ 
+ ██    ██  ██        ██         ██████   ██  ▀██▄  ██ ▀▀ ██ 
+  ██▄▄██   ██        ██        ▄██  ██▄  ██    ██  ██    ██ 
+   ▀▀▀▀    ▀▀        ▀▀        ▀▀    ▀▀  ▀▀    ▀▀▀ ▀▀    ▀▀ 
+                                                            
+_____________________________________________________________                                              
+"""
+
 @dataclass
 class SimulationResults:
     """
@@ -252,25 +369,23 @@ class SimulationResults:
             "case_info": self.case_info,
         }
 
-
-
-
 #=============================================================================
 #               Single Case Simulation (Manual RHS, Progress Tracking)
 #=============================================================================
 
 def run_a_simulation(
-    manifest_path: str | Path,
+    manifest: str | Path | dict,
     case_id: int = 1,
     info_string: str = "",
     results_dir: str = "results",
     save_results: bool = True,
     show_progress: bool = True,
     rtol: float = 1e-5, # relative tolerance for ODE solver
-    atol: float = 1e-9, # absolute tolerance for ODE solver
+    atol: float = 1e-8, # absolute tolerance for ODE solver
     plot_results: bool = False,
     custom_force_func: Callable = None,
     env_file: str | Path = None,  # Optional: override env file from manifest
+    workspace_path: str | Path = None,  # Required when manifest is dict for saving results
 ) -> SimulationResults:
     """
     Run a single simulation case with progress tracking and results saving.
@@ -284,7 +399,11 @@ def run_a_simulation(
     6. Save results to binary and JSON files
     
     Args:
-        manifest_path: Path to INPUT_manifest.json
+        manifest: Either:
+            - Path to INPUT_manifest.json (str or Path), OR
+            - Dict of pre-loaded/injected configs with keys: "env", "lineSys", 
+              "lineType", "simu". This is useful for parallel execution where
+              configs are pre-injected to avoid file I/O race conditions.
         case_id: Case identifier
         info_string: Description of the case
         results_dir: Directory for saving results
@@ -294,11 +413,15 @@ def run_a_simulation(
         atol: Absolute tolerance for ODE solver
         plot_results: Generate and save displacement plots
         custom_force_func: Optional custom force function f(t, x, configs)
-        env_file: Optional path to override env file (e.g., "env_withoutVar.json")
+        env_file: Optional path to override env file (only used when manifest is path)
+        workspace_path: Required when manifest is dict, for DIY configs and saving results
         
     Returns:
         SimulationResults object with all simulation data
     """
+    
+    print(get_logo())
+
     import time
     from scipy.integrate import solve_ivp
     from scipy.optimize import root
@@ -310,9 +433,22 @@ def run_a_simulation(
     except ImportError:
         HAS_TQDM = False
     
-    manifest_path = Path(manifest_path)
-    workspace_path = manifest_path.parent
-    results_path = workspace_path / results_dir
+    # Determine if manifest is a dict (pre-injected configs) or a path
+    manifest_is_dict = isinstance(manifest, dict)
+    
+    if manifest_is_dict:
+        # When manifest is a dict, workspace_path must be provided for saving results
+        if workspace_path is not None:
+            workspace_path = Path(workspace_path)
+            results_path = workspace_path / results_dir
+        else:
+            # No workspace - results will be saved to current directory
+            results_path = Path(results_dir)
+    else:
+        # Standard path-based loading
+        manifest_path = Path(manifest)
+        workspace_path = manifest_path.parent
+        results_path = workspace_path / results_dir
     
     # Initialize results
     results = SimulationResults(
@@ -330,47 +466,85 @@ def run_a_simulation(
     print("\n")
     
     # ================================================================
-    # STEP 1: Load configurations from manifest (direct loading)
+    # STEP 1: Load configurations from manifest (direct loading or dict)
     # ================================================================
-    # This follows the same pattern as the test code under __main__
     print("-" * 70)
-    print(" " * 20 + "< loading configs from manifest: >\n")
     
-    print(f"  Manifest path: {manifest_path}")
-    
-    # ___Load manifest___
-    manifest = load_manifest(manifest_path)
-    base = workspace_path  # Use the actual workspace path
-    files = manifest.files
-    
-    print(f"  Workspace: {base}")
-    print(f"  Files: {list(files.keys())}")
-    
-    # ___Load line types___
-    line_types = load_line_types(base / files["lineType"])
-    print(f"  ✓ Loaded lineTypes: {len(line_types)} types")
-    
-    # ___Load offshore system___
-    offsys_data = load_json(base / files["lineSys"])
-    offsys = OffSys.from_dict(offsys_data)
-    print(f"  ✓ Loaded lineSys: {offsys.nbod} bodies, {offsys.nDoF} DoF")
-    
-    # ___Load simulation config___
-    simu_config = load_simu_config(base / files["simu"])
-    print(f"  ✓ Loaded simu: static={simu_config.static_enabled}, dynamic={simu_config.dynamic_enabled}")
-    
-    # ___Load environment (use override if provided, otherwise from manifest)___
-    if env_file is not None:
-        env_path = base / env_file
-    elif "env" in files:
-        env_path = base / files["env"]
+    if manifest_is_dict:
+        # ---- Dict mode: configs already pre-loaded/injected ----
+        print(" " * 20 + "< loading configs from dict: >\n")
+        print(f"  Config keys: {list(manifest.keys())}")
+        
+        # Parse configs directly from dict using from_dict methods
+        # The dict has keys: "env", "lineSys", "lineType", "simu"
+        
+        # ___Line types___
+        if "lineType" in manifest and manifest["lineType"] is not None:
+            line_types = LineTypes.from_dict(manifest["lineType"])
+        else:
+            raise ValueError("manifest dict must contain 'lineType' key")
+        print(f"  ✓ Parsed lineTypes: {len(line_types)} types")
+        
+        # ___Offshore system___
+        if "lineSys" in manifest and manifest["lineSys"] is not None:
+            offsys = OffSys.from_dict(manifest["lineSys"])
+        else:
+            raise ValueError("manifest dict must contain 'lineSys' key")
+        print(f"  ✓ Parsed lineSys: {offsys.nbod} bodies, {offsys.nDoF} DoF")
+        
+        # ___Simulation config___
+        if "simu" in manifest and manifest["simu"] is not None:
+            simu_config = SimuConfig.from_dict(manifest["simu"])
+        else:
+            raise ValueError("manifest dict must contain 'simu' key")
+        print(f"  ✓ Parsed simu: static={simu_config.static_enabled}, dynamic={simu_config.dynamic_enabled}")
+        
+        # ___Environment___
+        if "env" in manifest and manifest["env"] is not None:
+            env = Env.from_dict(manifest["env"])
+        else:
+            raise ValueError("manifest dict must contain 'env' key")
+        print(f"  ✓ Parsed env: wave Hs={env.wave.Hs}m, Tp={env.wave.Tp}s")
+        print(f"               current vel={env.current.vel}, dir={env.current.propDir}°")
+        
     else:
-        # Default to env_withoutVar.json if available
-        env_path = base / "env_withoutVar.json"
-    
-    env = load_env_config(env_path)
-    print(f"  ✓ Loaded env: wave Hs={env.wave.Hs}m, Tp={env.wave.Tp}s")
-    print(f"               current vel={env.current.vel}, dir={env.current.propDir}°")
+        # ---- Path mode: load from files (existing behavior) ----
+        print(" " * 20 + "< loading configs from manifest file: >\n")
+        print(f"  Manifest path: {manifest_path}")
+        
+        # ___Load manifest___
+        manifest_data = load_manifest(manifest_path)
+        base = workspace_path  # Use the actual workspace path
+        files = manifest_data.files
+        
+        print(f"  Workspace: {base}")
+        print(f"  Files: {list(files.keys())}")
+        
+        # ___Load line types___
+        line_types = load_line_types(base / files["lineType"])
+        print(f"  ✓ Loaded lineTypes: {len(line_types)} types")
+        
+        # ___Load offshore system___
+        offsys_data = load_json(base / files["lineSys"])
+        offsys = OffSys.from_dict(offsys_data)
+        print(f"  ✓ Loaded lineSys: {offsys.nbod} bodies, {offsys.nDoF} DoF")
+        
+        # ___Load simulation config___
+        simu_config = load_simu_config(base / files["simu"])
+        print(f"  ✓ Loaded simu: static={simu_config.static_enabled}, dynamic={simu_config.dynamic_enabled}")
+        
+        # ___Load environment (use override if provided, otherwise from manifest)___
+        if env_file is not None:
+            env_path = base / env_file
+        elif "env" in files:
+            env_path = base / files["env"]
+        else:
+            # Default to env_withoutVar.json if available
+            env_path = base / "env_withoutVar.json"
+        
+        env = load_env_config(env_path)
+        print(f"  ✓ Loaded env: wave Hs={env.wave.Hs}m, Tp={env.wave.Tp}s")
+        print(f"               current vel={env.current.vel}, dir={env.current.propDir}°")
     
     # Create a Configs object for DIY configs
     configs = Configs(
@@ -387,13 +561,16 @@ def run_a_simulation(
     print("\n" + "-" * 70)
     print(" " * 20 + "< checking for DIY configs: >\n")
     
-    offsys, line_types, env = load_diy_configs(
-        workspace_path=workspace_path,
-        configs=configs,
-        offsys=offsys,
-        line_types=line_types,
-        env=env,
-    )
+    if workspace_path is not None:
+        offsys, line_types, env = load_diy_configs(
+            workspace_path=workspace_path,
+            configs=configs,
+            offsys=offsys,
+            line_types=line_types,
+            env=env,
+        )
+    else:
+        print("  Skipping DIY configs (no workspace_path provided)")
     
     # ================================================================
     # STEP 3: Build state-space system and force calculators
@@ -469,7 +646,7 @@ def run_a_simulation(
         
         # Step 1: Mooring-only equilibrium
         print(f"\n  Solving for mooring-only equilibrium...")
-        print("-" * 50 + "< PROGRAM ON >")
+        print(" " * 50 + ">>> PROGRAM ON <<<")
         
         def static_force_moor_only(x_pos):
             x_full = np.zeros(2 * ndof)
@@ -479,7 +656,7 @@ def run_a_simulation(
         from scipy.optimize import fsolve
         x_static_moor = fsolve(static_force_moor_only, np.zeros(ndof))
         
-        print("-" * 50 + "< PROGRAM OFF >")
+        print(" " * 50 + "<<< PROGRAM OFF >>>")
         print(f"\n  Mooring-only equilibrium:")
         for ibod in range(min(nbod, 6)):
             print(f"    Body {ibod}: x=[{x_static_moor[6*ibod]:.4f}, {x_static_moor[6*ibod+1]:.4f}, {x_static_moor[6*ibod+2]:.4f}] m")
@@ -619,7 +796,7 @@ def run_a_simulation(
         
         # Run integration
         print(f"\n  Integrating with RK45...")
-        print("-" * 50 + "< PROGRAM ON >")
+        print(" " * 50 + ">>> PROGRAM ON <<<")
         
         t0_sim = time.perf_counter()
         
@@ -644,8 +821,8 @@ def run_a_simulation(
                 x0,
                 method='RK45',
                 t_eval=t_eval,
-                rtol=rtol,
-                atol=atol,
+                rtol=rtol, # relative tolerance for ODE solver
+                atol=atol, # absolute tolerance for ODE solver
             )
         finally:
             if show_progress and HAS_TQDM:
@@ -678,17 +855,34 @@ def run_a_simulation(
         results.n_rhs_calls = tracker.call_count
         results.n_time_steps = len(t_out)
         
-        # Check for NaN
+        # =========================================================================
+        # STEP 6: Check for NaN, Inf, and divergence (unreasonably large values)
+        # =========================================================================
+       
+        MAX_REASONABLE_DISP = 1e4  # 10 km - anything larger is clearly divergence
+        
+        max_disp = float(np.max(np.abs(results.displacement)))
+        results.max_displacement = max_disp
+        
         if np.any(np.isnan(x_out)):
             results.success = False
             results.status = -1
             results.message = "Solution contains NaN values"
             print(f"  ⚠ WARNING: {results.message}")
+        elif np.any(np.isinf(x_out)):
+            results.success = False
+            results.status = -1
+            results.message = "Solution contains Inf values"
+            print(f"  ⚠ WARNING: {results.message}")
+        elif max_disp > MAX_REASONABLE_DISP:
+            results.success = False
+            results.status = -1
+            results.message = f"Solution diverged (max_disp={max_disp:.2e}m exceeds {MAX_REASONABLE_DISP:.0e}m)"
+            print(f"  ⚠ WARNING: {results.message}")
         else:
             results.success = True
             results.status = 1
-            results.max_displacement = float(np.max(np.abs(results.displacement)))
-            print(f"  ✓ Solution is stable (no NaN)")
+            print(f"  ✓ Solution is stable")
             print(f"  Max displacement: {results.max_displacement:.4f} m")
         
         # Print final positions
@@ -698,7 +892,7 @@ def run_a_simulation(
             print(f"    Body {ibod}: x=[{x_out[-1, 6*ibod]:.4f}, {x_out[-1, 6*ibod+1]:.4f}, {x_out[-1, 6*ibod+2]:.4f}] m")
         
         # ================================================================
-        # STEP 6: Save results (like MATLAB simOffarm.m)
+        # STEP 7: Save results (like MATLAB simOffarm.m)
         # ================================================================
         if save_results:
             print("\n" + "-" * 70)
@@ -711,30 +905,36 @@ def run_a_simulation(
             
             timestamp = results.timestamp
             
+            # Helper to get relative path (or absolute if no workspace_path)
+            def get_rel_path(file_path):
+                if workspace_path is not None:
+                    return str(file_path.relative_to(workspace_path))
+                return str(file_path)
+            
             # Save displacement data as binary (like MATLAB writeBinary)
             disp_data = np.column_stack([t_out, results.displacement])
             disp_file = bin_path / f"disp_{timestamp}.npy"
             np.save(disp_file, disp_data)
-            results.displacement_file = str(disp_file.relative_to(workspace_path))
+            results.displacement_file = get_rel_path(disp_file)
             print(f"  Saved displacement data: {results.displacement_file}")
             
             # Save velocity data
             vel_data = np.column_stack([t_out, results.velocity])
             vel_file = bin_path / f"vel_{timestamp}.npy"
             np.save(vel_file, vel_data)
-            results.velocity_file = str(vel_file.relative_to(workspace_path))
+            results.velocity_file = get_rel_path(vel_file)
             print(f"  Saved velocity data: {results.velocity_file}")
             
             # Save summary as JSON (like MATLAB jsonMake)
             summary_file = results_path / f"results_{timestamp}_{case_id}.json"
             with open(summary_file, "w") as f:
                 json.dump(results.to_dict(), f, indent=2)
-            results.summary_file = str(summary_file.relative_to(workspace_path))
+            results.summary_file = get_rel_path(summary_file)
             print(f"  Saved summary: {results.summary_file}")
         
-        # ================================================================
-        # STEP 7: Plot results (optional)
-        # ================================================================
+        # =========================================================================
+        # STEP 8: Plot results (optional)
+        # =========================================================================
         if plot_results:
             try:
                 import matplotlib.pyplot as plt
@@ -775,7 +975,8 @@ def run_a_simulation(
                 if save_results:
                     fig_file = results_path / f"dynamic_response_{timestamp}.png"
                     plt.savefig(fig_file, dpi=150)
-                    print(f"  Saved figure: {fig_file.relative_to(workspace_path)}")
+                    fig_rel = fig_file.relative_to(workspace_path) if workspace_path else fig_file
+                    print(f"  Saved figure: {fig_rel}")
                 
                 plt.show()
             except ImportError:
@@ -844,7 +1045,7 @@ if __name__ == "__main__":
     # Run simulation with a single function call
     # Use env_withoutVar.json for testing (no variable placeholders)
     results = run_a_simulation(
-        manifest_path=manifest_path,
+        manifest=manifest_path,  # Can be path OR dict with pre-injected configs
         case_id=1,
         info_string="Test case: 6-cage system with mooring and wave loads",
         results_dir="results",

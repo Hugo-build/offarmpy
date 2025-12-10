@@ -1,0 +1,84 @@
+{
+    "variables": [
+        {
+            "name": "Hs",
+            "kind": "uniform",
+            "params": {
+                "low": 0.5,
+                "high": 7.0
+            },
+            "description": "Significant wave height",
+            "unit": "m",
+            "targets": [
+                {
+                    "doc": "configs",
+                    "path": "env.wave.Hs"
+                }
+            ]
+        },
+        {
+            "name": "Tp",
+            "kind": "uniform",
+            "params": {
+                "low": 7.0,
+                "high": 20.0
+            },
+            "description": "Peak wave period",
+            "unit": "s",
+            "targets": [
+                {
+                    "doc": "configs",
+                    "path": "env.wave.Tp"
+                }
+            ]
+        },
+        {
+            "name": "UC",
+            "kind": "uniform",
+            "params": {
+                "low": 0.1,
+                "high": 1.0
+            },
+            "description": "Current velocity",
+            "unit": "m/s",
+            "targets": [
+                {
+                    "doc": "configs",
+                    "path": "env.current.vel[0]"
+                }
+            ]
+        },
+        {
+            "name": "dirWave",
+            "kind": "uniform",
+            "params": {
+                "low": 0.0,
+                "high": 359.0
+            },
+            "description": "Wave propagation direction",
+            "unit": "deg",
+            "targets": [
+                {
+                    "doc": "configs",
+                    "path": "env.wave.propDir"
+                }
+            ]
+        },
+        {
+            "name": "dirCur",
+            "kind": "uniform",
+            "params": {
+                "low": 0.0,
+                "high": 359.0
+            },
+            "description": "Current direction",
+            "unit": null,
+            "targets": [
+                {
+                    "doc": "configs",
+                    "path": "env.current.propDir"
+                }
+            ]
+        }
+    ]
+}
