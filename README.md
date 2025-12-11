@@ -1,5 +1,19 @@
 # OffarmPy
 
+```
+_____________________________________________________________
+                                                            
+   ▄▄▄▄    ▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄     ▄▄     ▄▄▄▄▄▄    ▄▄▄  ▄▄▄ 
+  ██▀▀██   ██▀▀▀▀▀▀  ██▀▀▀▀▀▀    ████    ██▀▀▀▀██  ███  ███ 
+ ██    ██  ██        ██          ████    ██    ██  ████████ 
+ ██    ██  ███████   ███████    ██  ██   ███████   ██ ██ ██ 
+ ██    ██  ██        ██         ██████   ██  ▀██▄  ██ ▀▀ ██ 
+  ██▄▄██   ██        ██        ▄██  ██▄  ██    ██  ██    ██ 
+   ▀▀▀▀    ▀▀        ▀▀        ▀▀    ▀▀  ▀▀    ▀▀▀ ▀▀    ▀▀ 
+                                                            
+_____________________________________________________________  
+```
+
 **Python implementation for time-domain simulation of offshore fish farm systems**
 
 OffarmPy is a numerical simulation tool for analyzing the dynamic response of floating offshore aquaculture systems, including mooring lines, environmental loads (waves, currents), and structural dynamics. It provides a Python-native simulation environment.
