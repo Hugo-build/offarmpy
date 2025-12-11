@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import random
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -913,14 +914,14 @@ def run_a_simulation(
             
             # Save displacement data as binary (like MATLAB writeBinary)
             disp_data = np.column_stack([t_out, results.displacement])
-            disp_file = bin_path / f"disp_{timestamp}.npy"
+            disp_file = bin_path / f"disp_{timestamp}_{random.randint(0, 99999):05d}.npy"
             np.save(disp_file, disp_data)
             results.displacement_file = get_rel_path(disp_file)
             print(f"  Saved displacement data: {results.displacement_file}")
             
             # Save velocity data
             vel_data = np.column_stack([t_out, results.velocity])
-            vel_file = bin_path / f"vel_{timestamp}.npy"
+            vel_file = bin_path / f"vel_{timestamp}_{random.randint(0, 99999):05d}.npy"
             np.save(vel_file, vel_data)
             results.velocity_file = get_rel_path(vel_file)
             print(f"  Saved velocity data: {results.velocity_file}")
