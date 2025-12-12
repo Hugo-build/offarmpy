@@ -2,6 +2,10 @@
 
 
 **Dec 10, 2025**
+- [X] Allow changable `Sn` values in the attached attr under `floatBody`. 
+  The `floatBody` is used for constructing `Elsys`, which is used for drag calculations.
+
+**Dec 10, 2025**
 - [X] Allow "manifest" arg for "run_a_simulation()" to be a `dict` or a `path` or the `str` of path. 
 
 **Dec 09, 2025**

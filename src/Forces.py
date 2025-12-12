@@ -90,7 +90,9 @@ def disabled_if(condition):
 #=============================================================================
 #                               Helper Functions
 def net_hydro_var(
-    cos_theta: NDArray[np.floating], Sn: float = 0.162, model: int = 1
+    cos_theta: NDArray[np.floating], 
+    Sn: float | NDArray[np.floating] = 0.162, 
+    model: int = 2
 ) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
     """
     Calculate varying drag and lift coefficients for net panels.
@@ -562,12 +564,20 @@ class CurrentForceNB(BaseForce):
         """
         return currentProfile(z, vel, zlevel)
 
-    def netHydroVar(self, cosTheta, Sn, model=1):
+    def netHydroVar(self, cosTheta, Sn, model=2):
         """
         Calculate varying drag and lift coefficients for net panels.
         
         Delegates to standalone net_hydro_var function for consistency.
         See net_hydro_var() for full documentation.
+
+        cosTheta: array of cosine of angle between flow and normal
+        Sn: solidity ratio
+        model: screen model
+        
+        Returns:
+            Cd: drag coefficient
+            Cl: lift coefficient
         """
         return net_hydro_var(cosTheta, Sn, model)
     
@@ -672,7 +682,14 @@ class CurrentForceNB(BaseForce):
 
         # cosTheta = dot(ed, nodeVec) for angle of attack
         cosTheta = np.sum(ed * self.Elsys.attachNodeVec[:, idx_net], axis=0)
-        Cd, Cl = self.netHydroVar(cosTheta, 0.162, 1)
+        
+        # Use specific Sn if available, otherwise default
+        if self.Elsys.attachNodeSn is not None:
+            Sn = self.Elsys.attachNodeSn[idx_net]
+        else:
+            Sn = 0.162
+
+        Cd, Cl = self.netHydroVar(cosTheta, Sn, 1)
         
         return Ud, Ud_mod, Cd, Cl
 
@@ -952,7 +969,15 @@ class DragForceNB(BaseForce):
 
         # cosTheta = dot(ed, nodeVec) for angle of attack
         cosTheta = np.sum(ed * self.Elsys.attachNodeVec[:, idx_net], axis=0)
-        Cd, Cl = self.netHydroVar(cosTheta, 0.162, 1)
+        
+        # Use specific Sn if available, otherwise default
+        if self.Elsys.attachNodeSn is not None:
+            Sn = self.Elsys.attachNodeSn[idx_net]
+            #print(Sn)
+        else:
+            Sn = 0.162
+
+        Cd, Cl = self.netHydroVar(cosTheta, Sn, 1)
         
         return Ud, Ud_mod, Cd, Cl
 

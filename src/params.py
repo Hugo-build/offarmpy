@@ -311,6 +311,7 @@ class FloatBody:
     type2node_L:      Optional[dict] = None  # left index for each element type
     type2node_R:      Optional[dict] = None  # right index for each element type
     waveTrans1st:     Optional[dict] = None  # first order wave transfer function
+    attachNodeSn:     Optional[list[float]] = None  # solidity ratio per node
 
     def __post_init__(self):
         # ndarray-ify lists
@@ -325,6 +326,9 @@ class FloatBody:
         self.attachNodeVec = np.array(self.attachNodeVec)
         self.attachNodeArea = np.array(self.attachNodeArea).flatten()
         self.attachNodeCd = np.array(self.attachNodeCd).flatten()
+        
+        if self.attachNodeSn is not None:
+            self.attachNodeSn = np.array(self.attachNodeSn).flatten()
 
         # Build type2node mappings from ElType and ElIndex
         if self.type2node_L is None:
@@ -373,6 +377,7 @@ class FloatBody:
             type2node_L=data.get("type2node_L"),
             type2node_R=data.get("type2node_R"),
             waveTrans1st=data.get("waveTrans1st"),
+            attachNodeSn=data.get("attachNodeSn"),
         )
 
 
@@ -483,6 +488,7 @@ class ElSys:
     attachNodeCd:             list[float]           # drag coefficient per node
     attachNodeVec:            list[list[float]]     # unit vector per node (3 x nNodes4nbod)
     attachNodeArea:           list[float]           # projected area per node
+    attachNodeSn:             Optional[list[float]] = None  # solidity ratio per node
 
     def __post_init__(self):
         """Convert lists to numpy arrays for numerical operations."""
@@ -500,6 +506,8 @@ class ElSys:
         self.attachNodeCd = np.array(self.attachNodeCd)
         self.attachNodeVec = np.array(self.attachNodeVec)
         self.attachNodeArea = np.array(self.attachNodeArea)
+        if self.attachNodeSn is not None:
+            self.attachNodeSn = np.array(self.attachNodeSn)
         
         print(f"ElSys initialized: {self.nbod} bodies, {self.nNodes4nbod} total nodes")
 
@@ -534,6 +542,10 @@ class ElSys:
         attachNodeCd = []
         attachNodeVec = []
         attachNodeArea = []
+        attachNodeSn = []
+        
+        # Check if any body has attachNodeSn
+        has_sn = any(getattr(b, 'attachNodeSn', None) is not None for b in floatBodies)
         
         # First pass: collect all nodes and compute sizes
         nNodes4nbod = 0
@@ -560,6 +572,15 @@ class ElSys:
             attachNodeCd.extend(np.array(body.attachNodeCd).flatten())
             attachNodeArea.extend(np.array(body.attachNodeArea).flatten())
             
+            # Handle optional attachNodeSn
+            if has_sn:
+                if getattr(body, 'attachNodeSn', None) is not None:
+                    attachNodeSn.extend(np.array(body.attachNodeSn).flatten())
+                else:
+                    # Pad with zeros if this body lacks Sn but others have it
+                    n_current_nodes = local_pos.shape[1]
+                    attachNodeSn.extend([0.0] * n_current_nodes)
+            
             # Count nodes
             n_nodes = local_pos.shape[1]
             nNodesPerBod[ibod] = n_nodes
@@ -571,6 +592,10 @@ class ElSys:
         attachNodeVec = np.hstack(attachNodeVec)
         attachNodeCd = np.array(attachNodeCd)
         attachNodeArea = np.array(attachNodeArea)
+        
+        attachNodeSn_final = None
+        if has_sn:
+            attachNodeSn_final = np.array(attachNodeSn)
         
         # Second pass: compute element indices
         Els2bod = np.zeros((nbod, 2), dtype=int)
@@ -612,6 +637,7 @@ class ElSys:
             attachNodeCd=attachNodeCd.tolist(),
             attachNodeVec=attachNodeVec.tolist(),
             attachNodeArea=attachNodeArea.tolist(),
+            attachNodeSn=attachNodeSn_final.tolist() if attachNodeSn_final is not None else None,
         )
 
 

@@ -23,7 +23,7 @@ try:
         load_manifest, load_var_sys, load_offsys,
     )
     from .Forces import (
-        DragForceNB_OT, CurrentForceNB, QSmoorForce,
+        DragForceNB_OT, CurrentForceNB, QSmoorForce, PotWaveForce,
     )
 except ImportError:
     from params import (
@@ -32,7 +32,7 @@ except ImportError:
         load_manifest, load_var_sys, load_offsys,
     )
     from Forces import (
-        DragForceNB_OT, CurrentForceNB, QSmoorForce,
+        DragForceNB_OT, CurrentForceNB, QSmoorForce, PotWaveForce,
     )
 
 
@@ -592,7 +592,8 @@ def run_a_simulation(
     # Create mooring force calculator
     float_bodies_data = [
         {"name": fb.name, "fairleadIndex": fb.fairleadIndex,
-         "AlineSlave": fb.AlineSlave, "SlineSlave": fb.SlineSlave}
+         "AlineSlave": fb.AlineSlave, "SlineSlave": fb.SlineSlave,
+         "waveTrans1st": getattr(fb, "waveTrans1st", {})}
         for fb in offsys.floatBodies
     ]
     anchor_line_type = getattr(offsys, 'anchorLineType', None) or [1] * offsys.nAnchorLine
@@ -620,6 +621,12 @@ def run_a_simulation(
     # Create drag force calculator (current + wave)
     drag_force = DragForceNB_OT(Elsys=elsys, current=env.current, wave=env.wave, threshold=0.5)
     print(f"  ✓ Created DragForceNB_OT (current + wave)")
+
+    # Create potential wave force calculator
+    pot_wave_force = PotWaveForce.from_config(
+        wave=env.wave, float_bodies=float_bodies_data, line_sys=offsys_dict
+    )
+    print(f"  ✓ Created PotWaveForce")
     
     # Initial condition
     x0 = np.zeros(2 * ndof)
@@ -786,7 +793,7 @@ def run_a_simulation(
                 )
             
             # Compute forces
-            u = mooring_force(x) + drag_force.calculate_with_cache(t, x)
+            u = mooring_force(x) + drag_force.calculate_with_cache(t, x) + pot_wave_force(t, x)
             
             # Add custom force if provided
             if custom_force_func is not None:

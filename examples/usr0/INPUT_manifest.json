@@ -3,7 +3,7 @@
     "files": {
         "env": "env_withoutVar.json",
         "lineType": "lineTypes_23-Feb-2025_12-25-34.json",
-        "lineSys": "sys6cage_DgEls_wT1st.json",
+        "lineSys": "sys6cage_DgEls_wT1st_randSn0112.json",
         "vessels": "vessels.json",
         "simu": "simu_config.json",
         "varSys": "varSys.json",
